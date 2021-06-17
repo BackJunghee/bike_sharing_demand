@@ -7,15 +7,16 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.11.3
 #   kernelspec:
-#     display_name: 'Python 3.9.2 64-bit (''miniforge3-4.9.2'': pyenv)'
+#     display_name: 'Python 3.8.8 64-bit (''tf'': conda)'
 #     language: python
-#     name: python392jvsc74a57bd01e1316376a83551d13556d3d3320e9d66876ad560731359d20b0bf1660df0458
+#     name: python388jvsc74a57bd03b308f18631e9840fcfbfaa3019d5c1eb9365215444aa6164eb4e8656c620f3f
 # ---
 
 # +
 ##기본 코드 귀찮아서 복붙함
+#시간을 보고 count를 예측하는 것이 목표! kaggle 스코어 값이 작을수록 정확하다. 
 
 import numpy as np
 import matplotlib as mpl
@@ -47,12 +48,17 @@ path = os.getcwd()
 
 df_train = pd.read_csv("data/train.csv", parse_dates = ["datetime"])
 df_test = pd.read_csv("data/test.csv", parse_dates = ["datetime"])
+df_sub = pd.read_csv("data/sampleSubmission.csv")
 
 
 # -
 
 #훈련 데이터 컬럼 정보
 df_train.info()
+
+#test데이터에는 casual과 register 컬럼이 없다.
+df_test.info()
+
 
 #결측치 확인 
 # => 이 작업은 test할 데이터 프레임에서도 해주어야 함 
@@ -78,7 +84,7 @@ df_train['minute'] = df_train['datetime'].dt.minute
 df_train['second'] = df_train['datetime'].dt.second
 
 # +
-# 시각화 해보기 
+# 시각화 해보기 ..
 figure, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(nrows=2, ncols=3)
 figure.set_size_inches(18, 10)
 
@@ -163,11 +169,44 @@ df_train_without_outliers = df_train[df_train['windspeed'] - df_train['windspeed
 
 print(df_train.shape)
 print(df_train_without_outliers.shape)
-# -
 
+# +
 #피쳐간 상관관계 확인
 g = sns.PairGrid(data=df_train, vars=['temp', 'atemp', 'casual_log', 'registered_log', 'humidity', 'windspeed', 'count_log'])
 g.map_diag(plt.hist)
 g.map_offdiag(plt.scatter)
+
+#상관관계가 있는 변수는 temp, atemp / count, registered_log 
+#그렇지만 count 값은 어차피 제출용에는 없음 
+# -
+
+df_train = df_train.drop(['casual', 'registered','casual_log','registered_log'], axis=1)
+
+# +
+from sklearn.ensemble import RandomForestRegressor
+
+rf = RandomForestRegressor(n_estimators=100)
+
+rf.fit(df_train,y_train)
+
+
+# +
+pred = rf_reg.predict(X_test)
+
+y_test_exp = np.expm1(y_test)
+pred_exp = np.expm1(pred)
+print('RandomForestRegressor RMSLE:', rmsle(y_test_exp, pred_exp))
+
+
+# -
+
+df_test
+pred = rf_reg.predict(X_test)
+
+df_test.info()
+
+for col in df_test.columns:
+    msperc = 'column: {:>10}\t Percent of NaN value: {:.2f}%'.format(col, 100 * (df_train[col].isnull().sum() / df_train[col].shape[0]))
+    print(msperc)
 
 
